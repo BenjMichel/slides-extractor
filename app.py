@@ -1,6 +1,7 @@
 import imageio
 import os
 import shutil
+import img2pdf
 
 path = './images'
 reader = imageio.get_reader('./video.mp4')
@@ -15,7 +16,6 @@ delayBetween2Detections = 50
 
 def initDir():
     try:
-        # os.rmdir(path)
         shutil.rmtree(path)
     except OSError as e:
         print(e);
@@ -36,28 +36,34 @@ previousMean = 0
 currentMean = 0
 slide = 0
 previousCapturedFrameIndex = 0
+imageList = []
 
 def shouldDetectFrame(previousMean, currentMean, previousCapturedIndex, currentIndex):
     return ((previousMean != currentMean) and
         (previousCapturedIndex == 0 or
         previousCapturedIndex < currentIndex - delayBetween2Detections))
 
-def captureFrame(i, slide):
+def captureFrame(i, slide, imageList):
     name = 'images/slide' + str(slide) + '.png'
     imageio.imwrite(name, im)
-    print('slide', slide)
+    imageList.append(name)
+
+def saveAsPdf(imageList):
+    with open("output.pdf", "wb") as f:
+        f.write(img2pdf.convert(imageList))
+
 
 initDir()
 
 for i, im in enumerate(reader):
     currentMean = int(im.mean())
-    # print('Mean of frame %i is %1.1f' % (i, currentMean))
     if shouldDetectFrame(previousMean, currentMean, previousCapturedFrameIndex, i):
         slide += 1
         previousCapturedFrameIndex = i
         nextFrameToCapture = i + delayBetweenDetectAndCapture
-        # print('previousCapturedFrameIndex', previousCapturedFrameIndex)
     if (i == nextFrameToCapture):
-        print("capture", i)
-        captureFrame(i, slide)
+        captureFrame(i, slide, imageList)
+        print("capture frame n°", i, " for slide n°", slide)
     previousMean = currentMean
+
+saveAsPdf(imageList)
